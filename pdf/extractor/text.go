@@ -735,7 +735,8 @@ func (to *textObject) renderText(data []byte) error {
 			string(r),
 			trm,
 			translation(to.gs.CTM.Mult(to.tm).Mult(td0)),
-			spaceWidth*trm.ScalingFactorX())
+			spaceWidth*trm.ScalingFactorX(),
+			font)
 		common.Log.Trace("i=%d code=%d mark=%s trm=%s", i, code, mark, trm)
 		to.marks = append(to.marks, mark)
 
@@ -780,12 +781,13 @@ type textMark struct {
 	height        float64         // Text height.
 	spaceWidth    float64         // Best guess at the width of a space in the font the text was rendered with.
 	count         int64           // To help with reading debug logs.
+	font          *model.PdfFont
 }
 
 // newTextMark returns an textMark for text `text` rendered with text rendering matrix (TRM) `trm` and end
 // of character device coordinates `end`. `spaceWidth` is our best guess at the width of a space in
 // the font the text is rendered in device coordinates.
-func (to *textObject) newTextMark(text string, trm transform.Matrix, end transform.Point, spaceWidth float64) textMark {
+func (to *textObject) newTextMark(text string, trm transform.Matrix, end transform.Point, spaceWidth float64, font *model.PdfFont) textMark {
 	to.e.textCount++
 	theta := trm.Angle()
 	orient := nearestMultiple(theta, 10)
@@ -804,6 +806,7 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 		height:        height,
 		spaceWidth:    spaceWidth,
 		count:         to.e.textCount,
+		font:          font,
 	}
 }
 
@@ -841,6 +844,32 @@ func (pt PageText) String() string {
 		parts = append(parts, t.String())
 	}
 	return strings.Join(parts, "\n")
+}
+
+type TextComponent struct {
+	Text   string
+	X      float64
+	Y      float64
+	Width  float64
+	Height float64
+	Font   *model.PdfFont
+}
+
+func (pt PageText) TextComponents() []TextComponent {
+	marks := make([]TextComponent, 0)
+
+	for _, t := range pt.marks {
+		marks = append(marks, TextComponent{
+			Text:   t.text,
+			X:      t.orientedStart.X,
+			Y:      t.orientedStart.Y,
+			Width:  t.spaceWidth,
+			Height: t.height,
+			Font:   t.font,
+		})
+	}
+
+	return marks
 }
 
 // length returns the number of elements in `pt.marks`.
