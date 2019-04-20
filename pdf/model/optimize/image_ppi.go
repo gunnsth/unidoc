@@ -53,6 +53,7 @@ func scaleImage(stream *core.PdfObjectStream, scale float64) error {
 		newImage = image.NewGray(rect)
 		imageHandler = model.ImageHandling.NewGrayImageFromGoImage
 	default:
+		// TODO(gunnsth): More generic colorspace handling here.
 		return fmt.Errorf("optimization is not supported for color space %s", xImg.ColorSpace.String())
 	}
 

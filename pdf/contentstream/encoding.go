@@ -262,7 +262,6 @@ func newDCTEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*core.
 	bufReader := bytes.NewReader(inlineImage.stream)
 
 	cfg, err := jpeg.DecodeConfig(bufReader)
-	//img, _, err := goimage.Decode(bufReader)
 	if err != nil {
 		common.Log.Debug("Error decoding file: %s", err)
 		return nil, err
