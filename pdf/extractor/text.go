@@ -694,6 +694,7 @@ func (to *textObject) renderText(data []byte) error {
 			continue
 		}
 
+		// TODO(gunnsth): Is this accurate? 1-1 runes and charcodes? What if some encoding problems, how resilient?
 		code := charcodes[i]
 		// The location of the text on the page in device coordinates is given by trm, the text
 		// rendering matrix.
@@ -737,6 +738,10 @@ func (to *textObject) renderText(data []byte) error {
 			translation(to.gs.CTM.Mult(to.tm).Mult(td0)),
 			spaceWidth*trm.ScalingFactorX(),
 			font)
+		original, ok := font.Encoder().CharcodeToRune(code)
+		if ok {
+			mark.original = string(original)
+		}
 		common.Log.Trace("i=%d code=%d mark=%s trm=%s", i, code, mark, trm)
 		to.marks = append(to.marks, mark)
 
@@ -774,7 +779,8 @@ func (to *textObject) moveTo(tx, ty float64) {
 // textMark represents text drawn on a page and its position in device coordinates.
 // All dimensions are in device coordinates.
 type textMark struct {
-	text          string          // The text.
+	text          string          // The text (decoded via ToUnicode).
+	original      string          // Original text (decoded).
 	orient        int             // The text orientation in degrees. This is the current TRM rounded to 10°.
 	orientedStart transform.Point // Left of text in orientation where text is horizontal.
 	orientedEnd   transform.Point // Right of text in orientation where text is horizontal.
@@ -782,6 +788,8 @@ type textMark struct {
 	spaceWidth    float64         // Best guess at the width of a space in the font the text was rendered with.
 	count         int64           // To help with reading debug logs.
 	font          *model.PdfFont
+	fontsize      float64
+	charspacing   float64
 }
 
 // newTextMark returns an textMark for text `text` rendered with text rendering matrix (TRM) `trm` and end
@@ -806,7 +814,8 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 		height:        height,
 		spaceWidth:    spaceWidth,
 		count:         to.e.textCount,
-		font:          font,
+		font:          to.state.tfont, //font,
+		fontsize:      to.state.tfs,
 	}
 }
 
@@ -847,12 +856,14 @@ func (pt PageText) String() string {
 }
 
 type TextComponent struct {
-	Text   string
-	X      float64
-	Y      float64
-	Width  float64
-	Height float64
-	Font   *model.PdfFont
+	Text     string
+	Original string
+	X        float64
+	Y        float64
+	Width    float64
+	Height   float64
+	Font     *model.PdfFont
+	FontSize float64
 }
 
 func (pt PageText) TextComponents() []TextComponent {
@@ -860,12 +871,14 @@ func (pt PageText) TextComponents() []TextComponent {
 
 	for _, t := range pt.marks {
 		marks = append(marks, TextComponent{
-			Text:   t.text,
-			X:      t.orientedStart.X,
-			Y:      t.orientedStart.Y,
-			Width:  t.spaceWidth,
-			Height: t.height,
-			Font:   t.font,
+			Text:     t.text,
+			Original: t.original,
+			X:        t.orientedStart.X,
+			Y:        t.orientedStart.Y,
+			Width:    t.spaceWidth,
+			Height:   t.height,
+			Font:     t.font,
+			FontSize: t.fontsize,
 		})
 	}
 
