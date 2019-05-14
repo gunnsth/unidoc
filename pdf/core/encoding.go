@@ -1949,7 +1949,7 @@ func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 		pixelsRow := make([]byte, enc.Columns)
 
 		pixel := 0
-		for j := 0; j < enc.Columns; j++ {
+		for j := 0; j < enc.Columns && i+j < len(data); j++ {
 			if data[i+j] == 255 {
 				pixelsRow[pixel] = 1
 			} else {
