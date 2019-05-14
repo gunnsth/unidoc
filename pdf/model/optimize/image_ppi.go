@@ -144,6 +144,7 @@ func (i *ImagePPI) Optimize(objects []core.PdfObject) (optimizedObjects []core.P
 				}
 			}
 		}
+		// TODO: Process recursively including XObject Forms and inline images.
 		for _, obj := range contents.Elements() {
 			if stream, isStream := core.GetStream(obj); isStream {
 				streamEncoder, err := core.NewEncoderFromStream(stream)
